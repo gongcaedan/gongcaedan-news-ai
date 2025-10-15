@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+SQLAlchemy>=2.0
+asyncpg
+groq
