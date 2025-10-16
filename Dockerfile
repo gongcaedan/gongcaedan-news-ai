@@ -2,7 +2,7 @@
 FROM python:3.12-slim
 
 # 작업 디렉토리
-WORKDIR /app
+WORKDIR app
 
 # 종속성 복사 및 설치
 COPY requirements.txt .
