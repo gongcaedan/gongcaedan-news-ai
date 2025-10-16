@@ -1,0 +1,50 @@
+name: build-and-bump
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  # 서비스별로 바꿔야 하는 2개
+  IMAGE_REPO: gongcaedan.kr.ncr.ntruss.com/gongcaedan/debate-ai
+  MANIFEST_SERVICE_PATH: debate-ai  # debate-ai
+  MANIFEST_REPO_HOSTPATH: github.com/gongcaedan/gongcaedan-manifest.git
+  # 공통 (Secrets에 넣어둔 값 사용)
+  MANIFEST_REPO_HTTPS: ${{ secrets.MANIFEST_REPO_HTTPS }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Docker Hub 로그인 (베이스 이미지 pull 용)
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}   # Docker Hub 아이디
+          password: ${{ secrets.DOCKERHUB_TOKEN }}      # Docker Hub Access Token
+
+      - name: Set IMAGE_TAG (short SHA)
+        run: echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+      - name: Docker login to NCR
+        run: |
+          echo "${{ secrets.NCR_PASSWORD }}" | docker login "${{ secrets.NCR_SERVER }}" \
+            -u "${{ secrets.NCR_USERNAME }}" --password-stdin
+
+      - name: Build & Push Image
+        run: |
+          docker build -t ${IMAGE_REPO}:${IMAGE_TAG} .
+          docker push ${IMAGE_REPO}:${IMAGE_TAG}
+
+      - name: Clone manifest repo (HTTPS + PAT)
+        run: |
+          git clone "https://x-access-token:${{ secrets.MANIFEST_PAT }}@${{ env.MANIFEST_REPO_HOSTPATH }}" manifest
+          cd manifest
+          git config user.name  "${{ secrets.GIT_USER_NAME || 'github-actions' }}"
+          git config user.email "${{ secrets.GIT_USER_EMAIL || 'actions@github.com' }}"
+          sed -i "s#^\(\s*tag:\s*\).*#\1\"${IMAGE_TAG}\"#g" ${MANIFEST_SERVICE_PATH}/values.yaml
+          git add ${MANIFEST_SERVICE_PATH}/values.yaml
+          git commit -m "ci(${MANIFEST_SERVICE_PATH}): bump image tag to ${IMAGE_TAG}" || exit 0
+          git push origin HEAD:main
