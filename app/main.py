@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from app.services.gemini_service import get_gemini_response
 from app.api.v1.routers.news import router as news_router  # ✅ 추가
 
@@ -16,3 +16,15 @@ def query_gemini(prompt: str):
 @app.get("/healthz")
 def healthz():
     return {"status": "ok"}
+
+@app.head("/healthz")
+def healthz_head():
+    return Response(status_code=200)
+
+@app.get("/")
+def root():
+    return {"status": "ok"}
+
+@app.head("/")
+def root_head():
+    return Response(status_code=200)
