@@ -13,6 +13,6 @@ def query_gemini(prompt: str):
     return {"response": get_gemini_response(prompt)}
 
 # 헬스체크용
-@app.get("/health")
-def health():
-    return {"ok": True}
+@app.get("/healthz")
+def healthz():
+    return {"status": "ok"}
